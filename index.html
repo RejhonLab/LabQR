@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LabQR</title>
+  <style>
+    body {
+      max-width: 720px;
+      margin: 4rem auto;
+      padding: 0 1rem;
+      font-family: system-ui, sans-serif;
+      line-height: 1.5;
+    }
+    code { overflow-wrap: anywhere; }
+    .error { color: #a00; }
+  </style>
+</head>
+<body>
+  <h1>LabQR</h1>
+  <p id="status">Načítám odkaz…</p>
+  <p id="fallback"></p>
+
+  <script>
+    async function redirectFromId() {
+      const status = document.getElementById("status");
+      const fallback = document.getElementById("fallback");
+      const params = new URLSearchParams(window.location.search);
+      const rawId = params.get("id");
+
+      if (!rawId) {
+        status.innerHTML =
+          'Chybí ID. Použij adresu ve tvaru <code>?id=AFM-001</code>.';
+        return;
+      }
+
+      const id = rawId.trim().toUpperCase();
+
+      try {
+        // Relativní cesta funguje i v projektovém webu /LabQR/.
+        const response = await fetch("./pages.json", { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`Nelze načíst pages.json (${response.status}).`);
+        }
+
+        const pages = await response.json();
+        const target = pages[id];
+
+        if (!target) {
+          status.className = "error";
+          status.textContent = `ID „${id}“ nebylo nalezeno.`;
+          return;
+        }
+
+        status.textContent = `Otevírám ${id}…`;
+
+        const link = document.createElement("a");
+        link.href = target;
+        link.textContent = "Pokud se stránka neotevře automaticky, klikni sem.";
+        link.rel = "noopener noreferrer";
+        fallback.replaceChildren(link);
+
+        // replace() nezanechá přesměrovací stránku v historii prohlížeče.
+        window.location.replace(target);
+      } catch (error) {
+        status.className = "error";
+        status.textContent = "Přesměrování se nepodařilo.";
+        fallback.textContent = error.message;
+      }
+    }
+
+    redirectFromId();
+  </script>
+</body>
+</html>
